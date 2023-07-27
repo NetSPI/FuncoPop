@@ -92,7 +92,7 @@ The easiest way to decrypt the keys returned from the PowerShell function is to 
 ### Host your own Function App to decrypt the keys
 Use the following Deploy button to deploy a function app to your Azure subscription that can be used to decrypt the extracted keys.
 
-[![Deploy to Azure](https://github.com/Azure-Samples/function-app-arm-templates/blob/main/images/deploytoazure.png?raw=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FNetSPI%2FFuncoPop%2Fazuredeploy.json)
+[![Deploy to Azure](https://github.com/Azure-Samples/function-app-arm-templates/blob/main/images/deploytoazure.png?raw=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FNetSPI%2FFuncoPop%2Fmain%2Fazuredeploy.json)
 
 ![image](https://github.com/NetSPI/FuncoPop/assets/2163397/3e4032b9-3614-422c-88ee-55516c1acdb1)
 
