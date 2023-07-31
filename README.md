@@ -94,7 +94,8 @@ Use the following Deploy button to deploy a function app to your Azure subscript
 
 [![Deploy to Azure](https://github.com/Azure-Samples/function-app-arm-templates/blob/main/images/deploytoazure.png?raw=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FNetSPI%2FFuncoPop%2Fmain%2Fazuredeploy.json)
 
-![image](https://github.com/NetSPI/FuncoPop/assets/2163397/3e4032b9-3614-422c-88ee-55516c1acdb1)
+![image](https://github.com/NetSPI/FuncoPop/assets/2163397/64504f17-d872-4094-9106-5f2fe4be03b7)
+
 
 
 
