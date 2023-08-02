@@ -688,11 +688,11 @@ function Invoke-AzFunctionAppTakeover{
                         try{Remove-AzStorageFile -Context $storageContext -ShareName $fileShareList.Name -Path site/wwwroot/$newFolder/requirements.txt -Verbose:$false -ErrorAction Stop | Out-Null}catch{}
                         try{Remove-AzStorageFile -Context $storageContext -ShareName $fileShareList.Name -Path site/wwwroot/$newFolder/project.assets.json -Verbose:$false -ErrorAction Stop | Out-Null}catch{}
                         try{Remove-AzStorageFile -Context $storageContext -ShareName $fileShareList.Name -Path site/wwwroot/$newFolder/NuGet/Migrations/1 -Verbose:$false -ErrorAction Stop | Out-Null}catch{}
+                        try{Remove-AzStorageFile -Context $storageContext -ShareName $fileShareList.Name -Path site/wwwroot/$newFolder/__pycache__/__init__.cpython-310.pyc -Verbose:$false -ErrorAction Stop | Out-Null}catch{}
+                        try{Remove-AzStorageDirectory -ShareName $fileShareList.Name -Context $storageContext -Path site/wwwroot/$newFolder/__pycache__ -ErrorAction Stop}catch{}
                         try{Remove-AzStorageDirectory -ShareName $fileShareList.Name -Context $storageContext -Path site/wwwroot/$newFolder/NuGet/Migrations -ErrorAction Stop}catch{}
                         try{Remove-AzStorageDirectory -ShareName $fileShareList.Name -Context $storageContext -Path site/wwwroot/$newFolder/NuGet -ErrorAction Stop}catch{}
                         try{Remove-AzStorageDirectory -ShareName $fileShareList.Name -Context $storageContext -Path site/wwwroot/$newFolder -ErrorAction Stop}catch{}
-
-                        #!!! - Add __pycache__ files to remove - __init__.cpython-310.pyc -  may have different name for different py version
 
                         # Delete generated funtion file from the Storage Account Container (azure-webjobs-secrets/$currentApp/$newFolder.json)
                         try{
