@@ -92,9 +92,10 @@ The easiest way to decrypt the keys returned from the PowerShell function is to 
 ### Host your own Function App to decrypt the keys
 Use the following Deploy button to deploy a function app to your Azure subscription that can be used to decrypt the extracted keys.
 
-[![Deploy to Azure](https://github.com/Azure-Samples/function-app-arm-templates/blob/main/images/deploytoazure.png?raw=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FNetSPI%2FFuncoPop%2Fazuredeploy.json)
+[![Deploy to Azure](https://github.com/Azure-Samples/function-app-arm-templates/blob/main/images/deploytoazure.png?raw=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FNetSPI%2FFuncoPop%2Fmain%2Fazuredeploy.json)
 
-![image](https://github.com/NetSPI/FuncoPop/assets/2163397/3e4032b9-3614-422c-88ee-55516c1acdb1)
+![image](https://github.com/NetSPI/FuncoPop/assets/2163397/64504f17-d872-4094-9106-5f2fe4be03b7)
+
 
 
 
@@ -104,4 +105,13 @@ Use the following Deploy button to deploy a function app to your Azure subscript
 ### Presentations
 * <a href="https://github.com/NetSPI/FuncoPop">What the Function: A Deep Dive into Azure Function App Security - DEF CON 31 - Cloud Village</a>
   - <a href="https://github.com/NetSPI/FuncoPop">Slides</a>
+
+### Previous Research
+* <a href="https://rogierdijkman.medium.com/privilege-escalation-via-storage-accounts-bca24373cc2e">Rogier Dijkman - Privilege Escalation via storage accounts</a>
+* <a href="https://orca.security/resources/blog/azure-shared-key-authorization-exploitation/">Roi Nisimi - From listKeys to Glory: How We Achieved a Subscription Privilege Escalation and RCE by Abusing Azure Storage Account Keys</a>
+* <a href="https://msrc.microsoft.com/blog/2023/04/best-practices-regarding-azure-storage-keys-azure-functions-and-azure-role-based-access/">MSRC - Best practices regarding Azure Storage Keys, Azure Functions, and Azure Role Based Access</a>
+* <a href="https://medium.com/xm-cyber/10-ways-of-gaining-control-over-azure-function-apps-7e7b84367ce6">Bill Ben Haim & Zur Ulianitzky - 10 ways of gaining control over Azure function Apps</a>
+* <a href="https://posts.specterops.io/abusing-azure-app-service-managed-identity-assignments-c3adefccff95">Andy Robbins – Abusing Azure App Service Managed Identity Assignments</a>
+
+
 	

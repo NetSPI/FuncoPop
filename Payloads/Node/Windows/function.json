@@ -2,18 +2,18 @@
   "bindings": [
     {
       "authLevel": "anonymous",
-      "name": "Request",
       "type": "httpTrigger",
       "direction": "in",
+      "name": "req",
       "methods": [
         "get",
         "post"
       ]
     },
     {
-      "name": "Response",
       "type": "http",
-      "direction": "out"
+      "direction": "out",
+      "name": "res"
     }
   ]
 }
