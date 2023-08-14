@@ -100,6 +100,7 @@ Use the following Deploy button to deploy a function app to your Azure subscript
 
 
 ### Related Blogs
+* <a href="https://www.netspi.com/blog/technical/cloud-penetration-testing/what-the-function-decrypting-azure-function-app-keys/">What the Function: Decrypting Azure Function App Keys</a>
 * <a href="https://blog.netspi.com/lateral-movement-azure-app-services/">Lateral Movement in Azure App Services</a>
 
 ### Presentations
