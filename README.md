@@ -104,7 +104,7 @@ Use the following Deploy button to deploy a function app to your Azure subscript
 
 ### Presentations
 * <a href="https://github.com/NetSPI/FuncoPop">What the Function: A Deep Dive into Azure Function App Security - DEF CON 31 - Cloud Village</a>
-  - <a href="https://github.com/NetSPI/FuncoPop">Slides</a>
+  - <a href="https://github.com/NetSPI/FuncoPop/blob/main/WhatTheFunction-DC31_CV.pdf">Slides</a>
 
 ### Previous Research
 * <a href="https://rogierdijkman.medium.com/privilege-escalation-via-storage-accounts-bca24373cc2e">Rogier Dijkman - Privilege Escalation via storage accounts</a>
