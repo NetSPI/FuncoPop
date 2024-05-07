@@ -236,6 +236,9 @@ function Invoke-AzFunctionAppTakeover{
                                 
                                     # If js file, then $appType = "Node.js"
                                     if(($_.Name).Split(".")[-1] -ieq "js"){$appType = "Node.js"; Write-Verbose "`t`t`t`tNode.js file found in the site/wwwroot/$currentFolder folder in the $currentShare File Share"}
+                                    
+                                    # If workflow.json file, then $appType = "Node.js", as it's a Logic App
+                                    if($_.Name -ieq "workflow.json"){$appType = "Node.js"; Write-Verbose "`t`t`t`tworkflow.json file found in the site/wwwroot/$currentFolder folder in the $currentShare File Share"}
                                 
                                     # If py file, then $appType = "Python"
                                     if(($_.Name).Split(".")[-1] -ieq "py"){$appType = "Python"; Write-Verbose "`t`t`t`tPython file found in the site/wwwroot/$currentFolder folder in the $currentShare File Share"}
@@ -527,7 +530,7 @@ function Invoke-AzFunctionAppTakeover{
                         $hostENVvar = ($encryptedFunctionKeys.decryptionKeyId).Split("=")[0]
                         if($hostENVvar -eq "MACHINEKEY_DecryptionKey"){$containerOS = "windows"}
                         else{$containerOS = "linux"}
-                                        
+
                         # Create new File Share (site/wwwroot/$newFolder) folder
                         $newFolder = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})
 
