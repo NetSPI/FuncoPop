@@ -104,7 +104,7 @@ Use the following Deploy button to deploy a function app to your Azure subscript
 * <a href="https://blog.netspi.com/lateral-movement-azure-app-services/">Lateral Movement in Azure App Services</a>
 
 ### Presentations
-* <a href="https://github.com/NetSPI/FuncoPop">What the Function: A Deep Dive into Azure Function App Security - DEF CON 31 - Cloud Village</a>
+* <a href="https://www.youtube.com/watch?v=f0ryxWuNzT4">What the Function: A Deep Dive into Azure Function App Security - DEF CON 31 - Cloud Village</a>
   - <a href="https://github.com/NetSPI/FuncoPop/blob/main/WhatTheFunction-DC31_CV.pdf">Slides</a>
 
 ### Previous Research
