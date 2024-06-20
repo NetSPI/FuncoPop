@@ -576,7 +576,7 @@ function Invoke-AzFunctionAppTakeover{
                         if($httpResponseContent.managementToken){$managementToken = $httpResponseContent.managementToken}else{$managementToken = "N/A"}
                         if($httpResponseContent.vaultToken){$vaultToken = $httpResponseContent.vaultToken}else{$vaultToken = "N/A"}
                         if($httpResponseContent.graphToken){$graphToken = $httpResponseContent.graphToken}else{$graphToken = "N/A"}
-                        $TempTblkeys.Rows.Add($currentApp, $encryptedFunctionKeys.masterKey.value, $httpResponseContent.AzureWebEncryptionKey, $managementToken, $vaultToken, $graphToken) | Out-Null
+                        $TempTblkeys.Rows.Add($currentApp, $encryptedFunctionKeys.masterKey.value, $httpResponseContent.decryptionKeyId, $managementToken, $vaultToken, $graphToken) | Out-Null
                         
 
                         Write-Verbose "`t`t`t`t`tRemoving the files from the Storage Account"

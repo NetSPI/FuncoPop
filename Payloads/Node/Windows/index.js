@@ -3,7 +3,7 @@ module.exports = async function (context, req) {
     // Get environment variables
     let identityEndpoint = process.env.IDENTITY_ENDPOINT;
     let identityHeader = process.env.IDENTITY_HEADER;
-    let decryptionKeyId = process.env.AzureWebEncryptionKey;
+    let decryptionKeyId = process.env.WEBSITE_AUTH_ENCRYPTION_KEY;
 
     let combinedResponse = {};
 
