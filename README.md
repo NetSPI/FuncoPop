@@ -113,6 +113,7 @@ Use the following Deploy button to deploy a function app to your Azure subscript
 * <a href="https://msrc.microsoft.com/blog/2023/04/best-practices-regarding-azure-storage-keys-azure-functions-and-azure-role-based-access/">MSRC - Best practices regarding Azure Storage Keys, Azure Functions, and Azure Role Based Access</a>
 * <a href="https://medium.com/xm-cyber/10-ways-of-gaining-control-over-azure-function-apps-7e7b84367ce6">Bill Ben Haim & Zur Ulianitzky - 10 ways of gaining control over Azure function Apps</a>
 * <a href="https://posts.specterops.io/abusing-azure-app-service-managed-identity-assignments-c3adefccff95">Andy Robbins – Abusing Azure App Service Managed Identity Assignments</a>
+* <a href="https://whiteknightlabs.com/2024/05/07/abusing-azure-logic-apps-part-1/">Chirag Savla and Raunak Parmar – Abusing Azure Logic Apps – Part 1</a>
 
 
 	
